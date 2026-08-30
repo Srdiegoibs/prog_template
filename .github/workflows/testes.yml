@@ -17,8 +17,34 @@ jobs:
       - name: rodar os testes visiveis
         run: |
           set +e
-          pytest -q
+          pytest -q --tb=line > /tmp/saida.txt 2>&1
           codigo=$?
-          # 5 = nenhum teste encontrado ainda. Nao e erro no comeco do trimestre.
-          if [ $codigo -eq 5 ]; then exit 0; fi
+          cat /tmp/saida.txt
+
+          echo "## Resultado dos testes visiveis" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ $codigo -eq 5 ]; then
+            echo "Nenhum teste encontrado ainda. Isso e normal no comeco do trimestre." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          placar=$(grep -Eo '[0-9]+ (passed|failed)(, [0-9]+ (passed|failed))*' /tmp/saida.txt | tail -1)
+          echo "### $placar" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 25 /tmp/saida.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ $codigo -eq 0 ]; then
+            echo "**Verde.** Todos os testes visiveis passaram." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Lembre: passar aqui nao garante nota cheia. A correcao usa tambem testes que voce nao ve, com os casos dificeis." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Vermelho, e isso e esperado ate voce terminar.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Nao ha nada quebrado no repositorio. Vermelho aqui quer dizer apenas que alguma funcao ainda nao foi implementada, ou que a implementacao ainda erra algum caso. Leia as linhas acima: cada uma diz qual teste falhou e qual valor saiu." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
           exit $codigo
